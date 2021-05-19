@@ -3,6 +3,7 @@ import socket
 import time
 
 import machine
+import pycom
 import utime
 from LIS2HH12 import LIS2HH12
 from network import WLAN, LoRa
@@ -41,8 +42,12 @@ def connect_wlan(wlan):
             raise TimeoutError("WiFi timeout")
 
         print("Still disconnected")
-        time.sleep(1.0)
-    
+        pycom.rgbled(0xFF0000)
+        time.sleep(0.5)
+        pycom.rgbled(0x000000)
+        time.sleep(0.5)
+
+    pycom.rgbled(0x000000)
     print("WiFi connected succesfully")
     print("wlan.ifconfig:\n{}".format(wlan.ifconfig()))
 
@@ -63,8 +68,8 @@ def init_lora():
 
 
 def main():
+    pycom.heartbeat(False)
     enable_gc()
-
     py = Pycoproc(Pycoproc.PYTRACK)
     acc = LIS2HH12()
     
@@ -78,7 +83,12 @@ def main():
 
     while True:
         log_acc(acc=acc)
-        sckt.send("Hello LoRa")
-        time.sleep(2.0)
+        payload = "{},{}".format(acc.roll(), acc.pitch())
+        print("Sending: {}".format(payload))
+        sckt.send(payload)
+        pycom.rgbled(0x0000FF)
+        time.sleep(0.5)
+        pycom.rgbled(0x000000)
+        time.sleep(0.5)
 
 main()
