@@ -10,7 +10,8 @@ from pycoproc_1 import Pycoproc
 
 WLAN_SSID = "pycom-wifi"
 WLAN_PASS = "securepassword"
-WLAN_TIMEOUT_MS = 20000
+WLAN_TIMEOUT_MS = 180000
+
 
 def enable_gc():
     print("Enabling garbage collector")
@@ -30,8 +31,8 @@ def connect_wlan(wlan):
     print("Connecting to SSID: {}".format(WLAN_SSID))
 
     wlan.connect(
-        ssid=WLAN_SSID, 
-        auth=(WLAN.WPA2, WLAN_PASS), 
+        ssid=WLAN_SSID,
+        auth=(WLAN.WPA2, WLAN_PASS),
         timeout=WLAN_TIMEOUT_MS)
 
     now = time.ticks_ms()
@@ -66,21 +67,44 @@ def init_lora():
     return lora, sckt
 
 
+def parse_payload(payload):
+    try:
+        payload = payload.decode()
+        splitted = payload.split(",")
+        roll = float(splitted[0])
+        pitch = float(splitted[1])
+        return {"roll": roll, "pitch": pitch}
+    except Exception as ex:
+        return None
+
+
+def map_to_rgbled(val, vmax):
+    val = abs(val)
+    val = min(vmax, max(0, val))
+    rgb_val = int((float(val) / vmax) * 254) << 8
+    pycom.rgbled(rgb_val)
+
+
 def main():
     pycom.heartbeat(False)
     enable_gc()
-    py = Pycoproc(Pycoproc.PYTRACK)
-    
+    pycoproc = Pycoproc(Pycoproc.PYTRACK)
     wlan = WLAN(mode=WLAN.STA)
     connect_wlan(wlan=wlan)
-
     lora, sckt = init_lora()
-
     rtc = machine.RTC()
     setup_rtc(rtc=rtc)
 
     while True:
-        print(sckt.recv(64))
-        time.sleep(5)
+        payload = sckt.recv(64)
+        print("Raw payload: {}".format(payload))
+        data = parse_payload(payload=payload)
+
+        if data:
+            print("Received: {}".format(data))
+            map_to_rgbled(data["roll"], vmax=180)
+
+        time.sleep(0.25)
+
 
 main()
