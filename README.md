@@ -1,6 +1,6 @@
 # Taller Internet de las Cosas
 
-Este repositorio contiene los programas para el taller de **Internet de las Cosas** organizado en el contexto de JIT (Jóvenes, Innovación y Tecnología) el 27 de Mayo en Cabañaquinta (Asturias).
+Este repositorio contiene los programas para el taller de **Internet de las Cosas** organizado en el contexto de JIT (Jóvenes, Innovación y Tecnología) el 28 de Junio de 2021 en Moreda (Asturias).
 
 Los programas están preparados para placas **Pycom FiPy v1** y una base **PyTrack v1**.
 
