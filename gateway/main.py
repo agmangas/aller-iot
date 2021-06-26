@@ -5,12 +5,20 @@ import time
 import machine
 import pycom
 import utime
+import urequests
+import ubinascii
 from network import WLAN, LoRa
 from pycoproc_1 import Pycoproc
 
 WLAN_SSID = "pycom-wifi"
 WLAN_PASS = "securepassword"
 WLAN_TIMEOUT_MS = 180000
+
+ENABLE_WIFI = True
+
+INFLUX_TOKEN = "secret"
+INFLUX_WRITE_URL = "https://influxdb.test.ctic.es/api/v2/write"
+INFLUX_WRITE_ARGS = "org=default_org&bucket=default_bucket&precision=s"
 
 
 def enable_gc():
@@ -85,12 +93,36 @@ def map_to_rgbled(val, vmax):
     pycom.rgbled(rgb_val)
 
 
+def post_roll(roll):
+    try:
+        url = "{}?{}".format(INFLUX_WRITE_URL, INFLUX_WRITE_ARGS)
+        device = ubinascii.hexlify(machine.unique_id()).decode()
+        data = "acceleration,device={} roll={}".format(device, roll)
+
+        print("Uploading: {}".format(data))
+
+        res = urequests.post(
+            url,
+            headers={
+                "Content-Type": "text/plain",
+                "Authorization": "Token {}".format(INFLUX_TOKEN)
+            },
+            data=str(data))
+
+        res.close()
+    except Exception as ex:
+        print("HTTP error: {}".format(ex))
+
+
 def main():
     pycom.heartbeat(False)
     enable_gc()
-    pycoproc = Pycoproc(Pycoproc.PYTRACK)
-    wlan = WLAN(mode=WLAN.STA)
-    connect_wlan(wlan=wlan)
+    Pycoproc(Pycoproc.PYTRACK)
+
+    if ENABLE_WIFI:
+        wlan = WLAN(mode=WLAN.STA)
+        connect_wlan(wlan=wlan)
+
     lora, sckt = init_lora()
     rtc = machine.RTC()
     setup_rtc(rtc=rtc)
@@ -104,7 +136,10 @@ def main():
             print("Received: {}".format(data))
             map_to_rgbled(data["roll"], vmax=180)
 
-        time.sleep(0.25)
+            if ENABLE_WIFI:
+                post_roll(data["roll"])
+
+        time.sleep(0.05)
 
 
 main()
